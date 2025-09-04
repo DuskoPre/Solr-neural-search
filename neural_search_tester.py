@@ -71,7 +71,6 @@ class NeuralSearchTester:
                 print(f"   Text: {doc['text'][:100]}...")
             
             # Assertion: Check that we got at most top_k results
-            result['response']['docs'] = result['response']['docs'][:top_k]
             assert len(result['response']['docs']) <= top_k, f"Expected at most {top_k} results, but got {len(result['response']['docs'])}"
             print("✓ Assertion passed: Number of results is correct.")
         
@@ -111,7 +110,6 @@ class NeuralSearchTester:
             print("✓ Assertion passed: All returned documents are within the filter.")
             
             # Assertion: Check that we got at most top_k results
-            result['response']['docs'] = result['response']['docs'][:top_k]
             assert len(result['response']['docs']) <= top_k, f"Expected at most {top_k} results, but got {len(result['response']['docs'])}"
             print("✓ Assertion passed: Number of results is correct.")
         
@@ -150,7 +148,6 @@ class NeuralSearchTester:
                 print(f"   Text: {doc['text'][:100]}...")
             
             # Assertion: Check that we got at most top_k results
-            result['response']['docs'] = result['response']['docs'][:top_k]
             assert len(result['response']['docs']) <= top_k, f"Expected at most {top_k} results, but got {len(result['response']['docs'])}"
             print("✓ Assertion passed: Number of results is correct.")
         
