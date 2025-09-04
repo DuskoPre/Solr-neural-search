@@ -1,0 +1,67 @@
+🎉 All green — 15/15 tests passed!
+You’ve got the full pipeline working: Solr core, schema (stored text, proper knn_vector), vector indexing, hybrid search, rerank via POST, and version-pinned embeddings. Nice work.
+
+What we changed along the way (for future you)
+
+Switched Solr startup to solr-precreate and fixed volume permissions.
+
+Recreated the ms-marco core cleanly when field types conflicted.
+
+Defined the vector field type (knn_vector, 384, cosine) and added fields via Schema API.
+
+Reindexed after schema reset.
+
+Pinned sentence-transformers / huggingface_hub to resolve cached_download.
+
+Changed rerank request to POST to avoid 414.
+
+Added rows=str(top_k) and capped merged hybrid results to top_k.
+
+Make it durable
+
+Add these to your repo so rebuilds “just work”:
+
+requirements.txt
+
+sentence-transformers==2.3.1
+huggingface_hub==0.20.2
+transformers<4.41
+
+
+docker-compose.yml (snippet)
+
+solr:
+  image: solr:9.4.1
+  ports: ["8983:8983"]
+  command: >
+    bash -c "solr-precreate ms-marco /opt/solr/server/solr/configsets/_default && solr-foreground"
+  volumes:
+    - ./solr-data:/var/solr
+neural-search-app:
+  build: .
+  command: ["bash","-lc","tail -f /dev/null"]  # keep container alive for exec
+  volumes:
+    - ./scripts:/app/scripts
+    - ./data:/app/data
+
+
+Optional: bake deps into the image (Dockerfile):
+
+RUN pip install --no-cache-dir \
+    sentence-transformers==2.3.1 \
+    huggingface_hub==0.20.2 \
+    "transformers<4.41"
+
+Handy commands to remember
+# Run full pipeline
+docker compose exec neural-search-app python3 scripts/sample_data_generator.py
+docker compose exec neural-search-app python3 scripts/vector_generation.py data/sample_documents.tsv data/sample_vectors.tsv
+docker compose exec neural-search-app python3 scripts/document_indexing.py data/sample_documents.tsv data/sample_vectors.tsv
+docker compose exec neural-search-app python3 scripts/neural_search_tester.py all
+
+# Solr checks
+curl -s "http://localhost:8983/solr/ms-marco/admin/ping"
+curl -s "http://localhost:8983/solr/ms-marco/select?q=*:*&rows=3&fl=id,text,score" | jq .
+
+
+Want me to wrap these into a Makefile so you can make setup, make index, make test?
