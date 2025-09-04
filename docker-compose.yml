@@ -1,26 +1,17 @@
-version: '3.8'
-
 services:
   solr:
     image: solr:9.4.1
     ports:
       - "8983:8983"
-    volumes:
-      - ./solr-data:/var/solr
-      - ./configs:/opt/solr/server/solr/configsets/ms-marco/conf
     environment:
       - SOLR_HEAP=1g
+    # Use built-in _default configset to precreate the core
     command: >
-      bash -c "
-        mkdir -p /opt/solr/server/solr/configsets/ms-marco/conf &&
-        cp -r /opt/solr/server/solr/configsets/_default/conf/* /opt/solr/server/solr/configsets/ms-marco/conf/ &&
-        solr-foreground &
-        sleep 30 &&
-        solr create -c ms-marco -d /opt/solr/server/solr/configsets/ms-marco &&
-        wait
-      "
+      bash -c "solr-precreate ms-marco /opt/solr/server/solr/configsets/_default && solr-foreground"
+    volumes:
+      - ./solr-data:/var/solr
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8983/solr/admin/ping"]
+      test: ["CMD", "curl", "-f", "http://localhost:8983/solr/admin/cores?action=STATUS"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -29,11 +20,12 @@ services:
     build: .
     depends_on:
       - solr
+    environment:
+      - SOLR_URL=http://solr:8983/solr/ms-marco
     volumes:
       - ./data:/app/data
       - ./scripts:/app/scripts
-    environment:
-      - SOLR_URL=http://solr:8983/solr/ms-marco
     working_dir: /app
+    command: ["bash","-lc","tail -f /dev/null"]   # <— keep container alive
     stdin_open: true
     tty: true
