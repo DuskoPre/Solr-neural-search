@@ -9,6 +9,7 @@ import json
 import sys
 import os
 from sentence_transformers import SentenceTransformer
+import time
 
 SOLR_URL = os.getenv('SOLR_URL', 'http://localhost:8983/solr/ms-marco')
 MODEL_NAME = 'all-MiniLM-L6-v2'
@@ -30,6 +31,7 @@ class NeuralSearchTester:
         url = f"{self.solr_url}{endpoint}"
         
         try:
+            start_time = time.time()
             if method == 'POST':
                 headers = {'Content-Type': 'application/json'}
                 response = requests.post(url, json=data, headers=headers, timeout=30)
@@ -37,6 +39,8 @@ class NeuralSearchTester:
                 response = requests.get(url, timeout=30)
             
             response.raise_for_status()
+            end_time = time.time()
+            print(f"   (Request took {end_time - start_time:.4f} seconds)")
             return response.json()
         
         except requests.exceptions.RequestException as e:
@@ -65,6 +69,10 @@ class NeuralSearchTester:
             for i, doc in enumerate(result['response']['docs'], 1):
                 print(f"{i}. ID: {doc['id']} (Score: {doc['score']:.4f})")
                 print(f"   Text: {doc['text'][:100]}...")
+            
+            # Assertion: Check that we got at most top_k results
+            assert len(result['response']['docs']) <= top_k, f"Expected at most {top_k} results, but got {len(result['response']['docs'])}"
+            print("✓ Assertion passed: Number of results is correct.")
         
         return result
     
@@ -94,6 +102,16 @@ class NeuralSearchTester:
             for i, doc in enumerate(result['response']['docs'], 1):
                 print(f"{i}. ID: {doc['id']} (Score: {doc['score']:.4f})")
                 print(f"   Text: {doc['text'][:100]}...")
+            
+            # Assertion: Check that all returned documents are within the filter
+            returned_ids = [doc['id'] for doc in result['response']['docs']]
+            for doc_id in returned_ids:
+                assert doc_id in filter_ids, f"Document ID {doc_id} is not in the filter list {filter_ids}"
+            print("✓ Assertion passed: All returned documents are within the filter.")
+            
+            # Assertion: Check that we got at most top_k results
+            assert len(result['response']['docs']) <= top_k, f"Expected at most {top_k} results, but got {len(result['response']['docs'])}"
+            print("✓ Assertion passed: Number of results is correct.")
         
         return result
     
@@ -128,6 +146,10 @@ class NeuralSearchTester:
             for i, doc in enumerate(result['response']['docs'], 1):
                 print(f"{i}. ID: {doc['id']} (Score: {doc['score']:.4f})")
                 print(f"   Text: {doc['text'][:100]}...")
+            
+            # Assertion: Check that we got at most top_k results
+            assert len(result['response']['docs']) <= top_k, f"Expected at most {top_k} results, but got {len(result['response']['docs'])}"
+            print("✓ Assertion passed: Number of results is correct.")
         
         return result
     
@@ -192,6 +214,39 @@ class NeuralSearchTester:
         
         return True
     
+    def test_empty_query(self):
+        """Test 5: Empty Query"""
+        print(f"\n=== Test 5: Empty Query ===")
+        # An empty query should still produce a vector and return some results
+        result = self.test_basic_knn_query(query="", top_k=1)
+        if result:
+            # Assertion: Check that we got at least one result for empty query
+            assert result['response']['numFound'] > 0, "Empty query should return at least one result"
+            print("✓ Assertion passed: Empty query handled gracefully.")
+        return result
+    
+    def test_out_of_vocabulary_query(self):
+        """Test 6: Out-of-Vocabulary Query"""
+        print(f"\n=== Test 6: Out-of-Vocabulary Query ===")
+        # A nonsensical query should still produce a vector and return results
+        result = self.test_basic_knn_query(query="asdfghjkl qwertyuiop zxcvbnm", top_k=1)
+        if result:
+            # Assertion: Check that we got at least one result for OOV query
+            assert result['response']['numFound'] > 0, "Out-of-vocabulary query should return at least one result"
+            print("✓ Assertion passed: Out-of-vocabulary query handled gracefully.")
+        return result
+    
+    def test_invalid_filter(self):
+        """Test 7: Invalid Filter (no matching documents)"""
+        print(f"\n=== Test 7: Invalid Filter ===")
+        # A filter that matches no documents should return 0 results
+        result = self.test_knn_with_prefiltering(query="bank", filter_ids=["999", "888", "777"], top_k=3)
+        if result:
+            # Assertion: Check that we got 0 results for invalid filter
+            assert result['response']['numFound'] == 0, "Invalid filter should return 0 results"
+            print("✓ Assertion passed: Invalid filter handled correctly.")
+        return result
+    
     def run_all_tests(self):
         """Run all neural search tests"""
         print("Starting Neural Search Tests...")
@@ -235,6 +290,26 @@ class NeuralSearchTester:
             total_tests += 1
             if self.test_reranking_query(rerank_query=query):
                 success_count += 1
+        
+        # Additional negative tests
+        print(f"\n{'='*50}")
+        print(f"Testing Negative Scenarios")
+        print(f"{'='*50}")
+        
+        # Test 5: Empty Query
+        total_tests += 1
+        if self.test_empty_query():
+            success_count += 1
+        
+        # Test 6: Out-of-Vocabulary Query
+        total_tests += 1
+        if self.test_out_of_vocabulary_query():
+            success_count += 1
+        
+        # Test 7: Invalid Filter
+        total_tests += 1
+        if self.test_invalid_filter():
+            success_count += 1
         
         print(f"\n{'='*50}")
         print(f"TEST SUMMARY")
