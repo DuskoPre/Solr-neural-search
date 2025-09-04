@@ -1,5 +1,5 @@
 # Solr-neural-search
-A comprehensive Docker-based Apache Solr neural search application
+A comprehensive Docker-based Apache Solr neural search application Bloomberg Terminal style
 
 # Apache Solr Neural Search Implementation
 
