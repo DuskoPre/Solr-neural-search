@@ -1,0 +1,4 @@
+# Some synonym groups for testing
+bank,financial institution
+number,digit,numeral
+transit,routing,transfer
