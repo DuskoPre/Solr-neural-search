@@ -12,9 +12,11 @@ services:
       - SOLR_HEAP=1g
     command: >
       bash -c "
+        mkdir -p /opt/solr/server/solr/configsets/ms-marco/conf &&
+        cp -r /opt/solr/server/solr/configsets/_default/conf/* /opt/solr/server/solr/configsets/ms-marco/conf/ &&
         solr-foreground &
         sleep 30 &&
-        solr create -c ms-marco -d /opt/solr/server/solr/configsets/ms-marco
+        solr create -c ms-marco -d /opt/solr/server/solr/configsets/ms-marco &&
         wait
       "
     healthcheck:
