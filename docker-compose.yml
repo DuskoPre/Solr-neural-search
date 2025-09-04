@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  solr:
+    image: solr:9.4.1
+    ports:
+      - "8983:8983"
+    volumes:
+      - ./solr-data:/var/solr
+      - ./configs:/opt/solr/server/solr/configsets/ms-marco/conf
+    environment:
+      - SOLR_HEAP=1g
+    command: >
+      bash -c "
+        solr-foreground &
+        sleep 30 &&
+        solr create -c ms-marco -d /opt/solr/server/solr/configsets/ms-marco
+        wait
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8983/solr/admin/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  neural-search-app:
+    build: .
+    depends_on:
+      - solr
+    volumes:
+      - ./data:/app/data
+      - ./scripts:/app/scripts
+    environment:
+      - SOLR_URL=http://solr:8983/solr/ms-marco
+    working_dir: /app
+    stdin_open: true
+    tty: true
