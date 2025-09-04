@@ -8,7 +8,7 @@
   <!-- Document fields -->
   <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false" />
   <field name="text" type="text_general" indexed="true" stored="true"/>
-  <field name="vector" type="knn_vector" indexed="true" stored="true"/>
+  <field name="vector" type="knn_vector" indexed="true" stored="false"/>
 
   <!-- Field to use to determine and enforce document uniqueness -->
   <uniqueKey>id</uniqueKey>
@@ -19,7 +19,12 @@
   <fieldType name="boolean" class="solr.BoolField" sortMissingLast="true"/>
 
   <!-- Dense Vector field type for neural search -->
-  <fieldType name="knn_vector" class="solr.DenseVectorField" vectorDimension="384" similarityFunction="cosine"/>
+  <fieldType name="knn_vector" class="solr.DenseVectorField" 
+             vectorDimension="384" 
+             similarityFunction="cosine"
+             knnAlgorithm="hnsw"
+             hnswMaxConnections="16"
+             hnswBeamWidth="100"/>
 
   <!-- Text field type -->
   <fieldType name="text_general" class="solr.TextField" positionIncrementGap="100" multiValued="true">
