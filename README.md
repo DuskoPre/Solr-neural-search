@@ -44,6 +44,7 @@ solr-neural-search/
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
+├── Readme.md
 ├── setup.sh
 ├── configs/
 │   ├── solrconfig.xml
